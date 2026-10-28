@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<!--
+  CapTax AI - Frontend Dashboard
+  Owner: Akash Singh Chauhan
+
+  Simple, dependency-free dashboard: calls the FastAPI backend to run the
+  pipeline and renders the resulting tax summary, DTAA relief and
+  disclosure report. No build step required — open directly in a browser
+  once the backend is running (see README), or serve via any static host.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapTax AI — Dashboard</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --green: #4ade80;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem 1.5rem;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .sub { color: var(--muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .bar {
+    display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem;
+  }
+  input[type=text] {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; flex: 1;
+  }
+  button {
+    background: var(--accent); color: #0f172a; border: none; font-weight: 600;
+    padding: 0.55rem 1.1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:hover:not(:disabled) { filter: brightness(1.1); }
+  .status { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.5rem; min-height: 1.2em; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem; margin-bottom: 1.25rem;
+  }
+  .card h2 { margin-top: 0; font-size: 1.05rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  .gain { color: var(--green); }
+  .loss { color: var(--red); }
+  pre {
+    white-space: pre-wrap; font-size: 0.8rem; line-height: 1.5; color: var(--text);
+    background: #0b1324; padding: 1rem; border-radius: 8px; border: 1px solid var(--border);
+    max-height: 420px; overflow: auto;
+  }
+  .empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CapTax AI — Dashboard</h1>
+  <div class="sub">Multi-Broker Capital Gains &amp; Foreign Asset Tax Disclosure Engine — Team 15</div>
+
+  <div class="bar">
+    <input id="apiBase" type="text" value="http://localhost:8000" />
+    <button id="runBtn" onclick="runPipeline()">Run Pipeline</button>
+    <button onclick="loadAll()">Refresh Data</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <div class="card">
+    <h2>Tax Summary (Schedule CG)</h2>
+    <div id="taxSummary" class="empty">No data yet — run the pipeline.</div>
+  </div>
+
+  <div class="card">
+    <h2>DTAA Relief (Schedule FSI)</h2>
+    <div id="dtaaRelief" class="empty">No data yet — run the pipeline.</div>
+  </div>
+
+  <div class="card">
+    <h2>Disclosure Report</h2>
+    <div id="disclosureReport" class="empty">No data yet — run the pipeline.</div>
+  </div>
+</div>
+
+<script>
+function apiBase() {
+  return document.getElementById('apiBase').value.replace(/\/$/, '');
+}
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+async function runPipeline() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  setStatus('Running pipeline…');
+  try {
+    const res = await fetch(apiBase() + '/pipeline/run', { method: 'POST' });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    setStatus(`Pipeline completed: ${data.steps.length} steps run.`);
+    await loadAll();
+  } catch (err) {
+    setStatus('Pipeline run failed: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadAll() {
+  await Promise.all([loadTaxSummary(), loadDtaaRelief(), loadDisclosureReport()]);
+}
+
+async function loadTaxSummary() {
+  const el = document.getElementById('taxSummary');
+  try {
+    const res = await fetch(apiBase() + '/data/tax-summary');
+    if (!res.ok) { el.innerHTML = '<div class="empty">No data yet — run the pipeline.</div>'; return; }
+    const rows = await res.json();
+    if (!rows.length) { el.innerHTML = '<div class="empty">No capital gains found.</div>'; return; }
+    el.innerHTML = renderTable(rows, [
+      'financial_year', 'ltcg_gain_inr', 'taxable_ltcg_inr', 'ltcg_tax_inr',
+      'stcg_gain_inr', 'stcg_tax_inr', 'total_tax_inr',
+    ]);
+  } catch (e) { el.innerHTML = '<div class="empty">Backend not reachable.</div>'; }
+}
+
+async function loadDtaaRelief() {
+  const el = document.getElementById('dtaaRelief');
+  try {
+    const res = await fetch(apiBase() + '/data/dtaa-relief');
+    if (!res.ok) { el.innerHTML = '<div class="empty">No data yet — run the pipeline.</div>'; return; }
+    const rows = await res.json();
+    if (!rows.length) { el.innerHTML = '<div class="empty">No foreign dividend income found.</div>'; return; }
+    el.innerHTML = renderTable(rows.slice(0, 15), [
+      'Security', 'financial_year', 'gross_dividend_inr',
+      'foreign_tax_withheld_inr', 'dtaa_relief_inr', 'net_indian_tax_payable_inr',
+    ]);
+  } catch (e) { el.innerHTML = '<div class="empty">Backend not reachable.</div>'; }
+}
+
+async function loadDisclosureReport() {
+  const el = document.getElementById('disclosureReport');
+  try {
+    const res = await fetch(apiBase() + '/data/disclosure-summary');
+    if (!res.ok) { el.innerHTML = '<div class="empty">No data yet — run the pipeline.</div>'; return; }
+    const data = await res.json();
+    el.innerHTML = '<pre>' + escapeHtml(data.report) + '</pre>';
+  } catch (e) { el.innerHTML = '<div class="empty">Backend not reachable.</div>'; }
+}
+
+function renderTable(rows, columns) {
+  const header = columns.map(c => `<th>${c.replace(/_/g, ' ')}</th>`).join('');
+  const body = rows.map(row => {
+    const cells = columns.map(c => {
+      let v = row[c];
+      if (typeof v === 'number') v = v.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      return `<td>${v ?? ''}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  return `<table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Try loading existing data on page open, in case pipeline already ran.
+loadAll();
+</script>
+</body>
+</html>
