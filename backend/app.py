@@ -41,6 +41,8 @@ if FRONTEND_DIR.exists():
     def get_dashboard():
         return FileResponse(FRONTEND_DIR / "index.html")
     app.mount("/dashboard", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    if (FRONTEND_DIR / "styles").exists():
+        app.mount("/styles", StaticFiles(directory=str(FRONTEND_DIR / "styles")), name="styles")
 
 PIPELINE = [
     (BACKEND_DIR / "generate_datasets.py", "Anishka Jain"),

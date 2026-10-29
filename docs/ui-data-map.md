@@ -77,3 +77,4 @@ This document maps all backend endpoints and data files to UI components across 
 * **Palette**: Dark luxury aesthetic (#0c0c0e background, #121214 cards, #F0502D orange active pill, #22c55e green positive, #ef4444 red negative, #e2e8f0 white/silver text).
 * **Number Formatting**: Indian grouping standard (`en-IN`), prefixed with `₹` (or `$` when toggled to USD).
 * **Zero Fake Data**: Every single metric links directly to real backend API endpoints or outputs derived faithfully from real trades.
+
