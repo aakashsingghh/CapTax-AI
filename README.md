@@ -31,4 +31,43 @@ intentionally simple so it's easy to deepen before Round 3.
 | Week 2 | Architecture & DB | Architecture review | Schema & migrations | UI kit | ERD, API spec v1 | Planned |
 | Week 3 | Ingestion module | Risk review, unblock | Broker adapters (Zerodha, Groww, Upstox) | Auth screens | Ingestion service v1 | **Done — this codebase** |
 | Week 4 | Reconciliation engine | Rule-engine design | Corporate action & FX logic | Dashboard shell | Reconciliation module | **Done — this codebase** |
-| Week 5 | AI interpretation layer | LLM integration for LTCG/STCG | Cost-basis (FIFO) matching | Gainsgit 
+| Week 5 | AI interpretation layer | LLM integration for LTCG/STCG | Cost-basis (FIFO) matching | Gains reconciliation & UI | Working prototype | **Done — this codebase** |
+
+---
+
+## 6. How to Run Locally
+
+### Prerequisites
+- Python 3.10+
+- Dependencies: `fastapi`, `uvicorn`, `pandas` (installed in `.venv`)
+
+### Start Backend & Frontend
+Run from the project root:
+```bash
+# 1. Activate virtual environment
+source .venv/bin/activate
+
+# 2. Start the FastAPI + Uvicorn server on port 8001
+cd backend
+uvicorn app:app --host 0.0.0.0 --port 8001 --reload
+```
+
+### Access URLs
+- **Datara Frontend UI**: [http://localhost:8001/dashboard](http://localhost:8001/dashboard)
+- **Interactive API Docs (Swagger)**: [http://localhost:8001/docs](http://localhost:8001/docs)
+- **API Status Root**: [http://localhost:8001/](http://localhost:8001/)
+
+---
+
+## 7. Frontend Architecture (Datara Theme)
+Reconstructed according to the Datara reference design:
+- **Design Tokens**: Near-black canvas (`#0c0c0e`), dark glass cards (`#121214`), orange-red active pill accent (`#F0502D`), 24px-28px radius, vector 3D asset graphic.
+- **Top Pill Navigation**:
+  - `Dashboard`: Portfolio hero card, dual Market Overview charts (spline line chart with negative zero-axis & stacked bar chart with highlighted active FY), date-grouped recent transactions, insights, and 5-segment tax exposure gauge.
+  - `Investments`: Live scrip holdings, invested capital, and domestic vs. foreign currency breakdown.
+  - `Brokers`: Status of connected accounts (Zerodha, Groww, ICICI Direct, Interactive Brokers).
+  - `Tax & ITR`: Multi-year Schedule CG, grouped Schedule FSI (DTAA Article 25) with expandable drill-down & calculation breakdown, and complete Monospace Disclosure Report (all 3 FYs) with Copy/Download.
+  - `Activity`: 7-step pipeline visual stepper and execution audit logs.
+- **Zero Fake Data**: Every metric, table cell, and chart node is wired dynamically to real endpoints on `:8001`.
+- For detailed route-to-component mappings, see [`docs/ui-data-map.md`](docs/ui-data-map.md).
+ 
